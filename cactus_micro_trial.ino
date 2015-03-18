@@ -139,10 +139,10 @@ if(status==0) {
 }
 
 }
+
 //----- update the Thingspeak string with 3 values
 void updateTS( String T, String H , String W)
 {
-  // 瑷畾 ESP8266 浣滅偤 Client 绔�
   String cmd = "AT+CIPSTART=\"TCP\",\"";
   cmd += IP;
   cmd += "\",80";
@@ -162,16 +162,19 @@ void updateTS( String T, String H , String W)
   Serial.print("AT+CIPSEND=");
   Serial.println( cmd.length() );
 
-  if(debug.find( ">" ) )
-  {
-    debug.print(">");
+  if(debug.find(">")) {
+    // The line is useless
+    //debug.print(">");
     debug.print(cmd);
     Serial.print(cmd);
-  }
-  else
-  {
+    delay(1000);
     sendDebug( "AT+CIPCLOSE" );
+  } else {
+    sendDebug( "AT+CIPCLOSE" );
+    return;
   }
+
+
   if( debug.find("OK") )
   {
     debug.println( "RECEIVED: OK" );
