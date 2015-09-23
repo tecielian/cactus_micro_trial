@@ -1,10 +1,8 @@
-#include <SoftwareSerial.h>
-
-int sensor_temp = A2;
-int value_temp;
 int sensor_light = A1;
 int value_light;
-int sensor_water = A0;
+int sensor_temp = A2;
+int value_temp;
+int sensor_water = A3;
 int value_water;
 int red = 9;
 int green = 8;
@@ -12,20 +10,16 @@ int blue = 7;
 int status;
 int wifiConnected = 0;
 
-#define DEBUG 1
+#define DEBUG 1  // Please set DEBUG = 0 when USB not connected
 
 #define _baudrate 9600
 #define wifi_pin 13
 
-
-#define _rxpin 11
-#define _txpin 12
-
-SoftwareSerial debug( _rxpin, _txpin );
 #define SSID "xxxx"
 #define PASS "xxxx"
 #define IP "184.106.153.149"
-String GET = "GET /update?key=9TYUWTFXTYC9RKT8";
+
+String GET = "GET /update?key=xxxx";
 
 void setup() {
   pinMode (13, OUTPUT);
@@ -36,18 +30,18 @@ void setup() {
   pinMode (blue, OUTPUT); 
   pinMode (green, OUTPUT); 
   Serial.begin( _baudrate );
-  debug.begin( _baudrate );
+  Serial1.begin( _baudrate );
   
-  if(DEBUG) { // Please set DEBUG = 0 when USB not connected
+  if(DEBUG) { 
     while(!Serial);
   }
 
   //set mode needed for new boards
-  debug.println("AT+RST");
+  Serial1.println("AT+RST");
   delay(3000);//delay after mode change       
-  debug.println("AT+CWMODE=1");
+  Serial1.println("AT+CWMODE=1");
   delay(300);
-  debug.println("AT+RST");
+  Serial1.println("AT+RST");
   delay(500);
 
 }
@@ -55,16 +49,16 @@ void setup() {
 void loop() {
   
   if(!wifiConnected) {
-    debug.println("AT");
+    Serial1.println("AT");
     delay(1000);
-    if(debug.find("OK")){
+    if(Serial1.find("OK")){
       Serial.println("Module Test: OK");
       connectWifi();
 
       if (wifiConnected) {
           String cmd = "AT+CIPMUX=0";
           sendDebug( cmd );
-          if( debug.find( "Error") )
+          if( Serial1.find( "Error") )
           {
                Serial.print( "RECEIVED: Error" );
                return;
@@ -90,8 +84,8 @@ void loop() {
   Serial.print("water");
   Serial.println( value_water );
   
-  String temp =String(value_temp);// turn integer to string
-  String light= String(value_light);// turn integer to string
+  String temp=String(value_temp);// turn integer to string
+  String light=String(value_light);// turn integer to string
   String water=String(value_water);// turn integer to string
   
   updateTS(temp,light, water);
@@ -104,7 +98,7 @@ void loop() {
   delay(300); 
 status=1;
 }else{
-  digitalWrite (red, HIGH); // normal temp - red led off
+  digitalWrite (red, LOW); // normal temp - red led off
 }
   if (value_light < 300) {
   digitalWrite (blue, LOW); // not enough light - yellow led on
@@ -112,12 +106,12 @@ status=1;
   digitalWrite (green, LOW);
   delay(300);               // wait for a second
   digitalWrite(blue, HIGH);  // turn the LED off by making the voltage LOW
-  digitalWrite (red, HIGH);
+  digitalWrite (red, LOW);
   digitalWrite (green, HIGH);
   delay(300); 
 status=1;  
 }else{
-  digitalWrite (blue, HIGH); // enough light - yellow led off
+  digitalWrite (blue, LOW); // enough light - yellow led off
 }
   if (value_water < 300) {  
   digitalWrite (blue, LOW); // plant thirsty - blue led on
@@ -126,7 +120,7 @@ status=1;
   delay(300); 
 status=1;
 }else{
-  digitalWrite (blue, HIGH); // soil is moist - blue led off
+  digitalWrite (blue, LOW); // soil is moist - blue led off
 }
 
 if(status==0) {
@@ -135,7 +129,7 @@ if(status==0) {
   digitalWrite(green, HIGH);    // turn the LED off by making the voltage LOW
   delay(300); 
  }else{
-  digitalWrite (green, HIGH);
+  digitalWrite (green, LOW);
 }
 
 }
@@ -148,24 +142,24 @@ void updateTS( String T, String H , String W)
   cmd += "\",80";
   sendDebug(cmd);
   delay(2000);
-  if( debug.find( "Error" ) )
+  if( Serial1.find( "Error" ) )
   {
-    debug.print( "RECEIVED: Error\nExit1" );
+    Serial1.print( "RECEIVED: Error\nExit1" );
     return;
   }
 
   cmd = GET + "&field1=" + T +"&field2=" + H +"&field3=" + W +"\r\n";
-  debug.print( "AT+CIPSEND=" );
-  debug.println( cmd.length() );
+  Serial1.print( "AT+CIPSEND=" );
+  Serial1.println( cmd.length() );
 
   //display command in serial monitor
   Serial.print("AT+CIPSEND=");
   Serial.println( cmd.length() );
 
-  if(debug.find(">")) {
+  if(Serial1.find(">")) {
     // The line is useless
-    //debug.print(">");
-    debug.print(cmd);
+    //Serial1.print(">");
+    Serial1.print(cmd);
     Serial.print(cmd);
     delay(1000);
     sendDebug( "AT+CIPCLOSE" );
@@ -175,13 +169,13 @@ void updateTS( String T, String H , String W)
   }
 
 
-  if( debug.find("OK") )
+  if( Serial1.find("OK") )
   {
-    debug.println( "RECEIVED: OK" );
+    Serial1.println( "RECEIVED: OK" );
   }
   else
   {
-    debug.println( "RECEIVED: Error\nExit2" );
+    Serial1.println( "RECEIVED: Error\nExit2" );
   }
 }
 
@@ -189,7 +183,7 @@ void sendDebug(String cmd)
 {
   Serial.print("SEND: ");
   Serial.println(cmd);
-  debug.println(cmd);
+  Serial1.println(cmd);
 }
 
 boolean connectWifi() {     
@@ -199,11 +193,11 @@ boolean connectWifi() {
  cmd+=PASS;
  cmd+="\"";
  Serial.println(cmd);
- debug.println(cmd);
+ Serial1.println(cmd);
            
  for(int i = 0; i < 20; i++) {
    Serial.print(".");
-   if(debug.find("OK"))
+   if(Serial1.find("OK"))
    {
      wifiConnected = 1;
 
@@ -221,4 +215,5 @@ boolean connectWifi() {
  
  return wifiConnected;
 }
+
 
